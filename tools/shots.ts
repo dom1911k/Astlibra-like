@@ -30,6 +30,19 @@ await page.waitForTimeout(1200);
 await page.keyboard.up('KeyD');
 for (let i = 0; i < 6; i++) { await page.keyboard.press('KeyJ'); await page.waitForTimeout(110); }
 await page.screenshot({ path: OUT + 's2-fight.png' });
+for (const d of [2, 3]) {
+  await page.evaluate((depth) => {
+    const g = (window as any).__game;
+    const sc = g.scene;
+    sc.r.depth = depth;
+    sc.enterNode(g, sc.r.map.nodes[sc.r.node]);
+  }, d);
+  await page.waitForTimeout(1500);
+  await page.keyboard.down('KeyD');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('KeyD');
+  await page.screenshot({ path: OUT + `s-depth${d}.png` });
+}
 await page.keyboard.press('KeyM');
 await page.waitForTimeout(300);
 await page.screenshot({ path: OUT + 's3-map.png' });

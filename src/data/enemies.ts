@@ -78,7 +78,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   },
   moth_wraith: {
     id: 'moth_wraith', name: 'Moth Wraith', desc: 'Drawn to light, it circles overhead and dives in a long swooping arc. Easy to juggle once grounded.', role: 'Flying diver',
-    ai: 'moth', hp: 40, atk: 10, def: 2, poise: 10, speed: 1.4, w: 14, h: 12, flying: true, xp: 9, gilt: 5, color: '#6b5a7e', accent: '#ffe9a8', aggro: 260, minDepth: 1, cost: 2,
+    ai: 'moth', hp: 40, atk: 10, def: 2, poise: 10, speed: 1.4, w: 14, h: 12, flying: true, xp: 9, gilt: 5, color: '#9a86b4', accent: '#ffe9a8', aggro: 260, minDepth: 1, cost: 2,
     attacks: [
       { id: 'dive', windup: 26, active: 34, recovery: 30, hitbox: { x: -8, y: -12, w: 16, h: 12 }, motion: 1, kb: [3, -2], range: [0, 140], cooldown: 90 },
     ],

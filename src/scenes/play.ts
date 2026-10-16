@@ -10,7 +10,7 @@ import { WorldRenderer } from '../render/worldRenderer';
 import { Boss } from '../sim/boss';
 import type { SimEvent } from '../sim/events';
 import type { World } from '../sim/world';
-import { C, bar, font, text, textShadow, type Ctx } from '../ui/ui';
+import { C, bar, font, heading, text, textShadow, titleFont, type Ctx } from '../ui/ui';
 
 /** Shared base for every scene that runs the combat simulation (hub, expedition, arena). */
 export abstract class PlayScene implements Scene {
@@ -70,38 +70,45 @@ export abstract class PlayScene implements Scene {
     const d = p.derived;
     const run = this.run();
     // ── vitals ──
-    const x = 16;
-    let y = 14;
-    ctx.fillStyle = 'rgba(8,6,12,0.6)';
-    ctx.fillRect(x - 6, y - 6, 268, run ? 76 : 62);
+    const x = 58;
+    let y = 16;
+    hudPlate(ctx, 8, 8, 292, run ? 74 : 62);
+    lanternEmblem(ctx, 30, 36, p.hp / d.maxHp, g.t);
     const hpF = p.hp / d.maxHp;
     this.hpGhost = Math.max(hpF, this.hpGhost - 0.004);
-    bar(ctx, x, y, 240, 14, hpF, hpF < 0.3 ? '#ff3030' : C.hp, 'rgba(0,0,0,0.7)', this.hpGhost);
-    if (p.barrier > 0) bar(ctx, x, y + 10, 240 * Math.min(1, p.barrier / d.maxHp), 4, 1, '#8fe0ff', 'rgba(0,0,0,0)');
+    bar(ctx, x, y, 226, 13, hpF, hpF < 0.3 ? '#ff3030' : C.hp, 'rgba(0,0,0,0.7)', this.hpGhost);
+    if (p.barrier > 0) bar(ctx, x, y + 10, 226 * Math.min(1, p.barrier / d.maxHp), 4, 1, '#8fe0ff', 'rgba(0,0,0,0)');
     textShadow(ctx, `${Math.ceil(p.hp)} / ${d.maxHp}`, x + 6, y, '#fff', 11, 'left', true);
     y += 18;
-    bar(ctx, x, y, 200, 8, p.mp / d.maxMp, C.mp);
-    textShadow(ctx, `${Math.floor(p.mp)}`, x + 206, y - 3, '#9fc8ff', 11, 'left', true);
+    bar(ctx, x, y, 190, 7, p.mp / d.maxMp, C.mp);
+    textShadow(ctx, `${Math.floor(p.mp)}`, x + 196, y - 3, '#9fc8ff', 11, 'left', true);
     y += 12;
     // lamp oil
     for (let i = 0; i < Math.max(p.potions, Math.round(p.stats.potions)); i++) {
-      ctx.fillStyle = i < p.potions ? '#ffd27a' : 'rgba(255,255,255,0.15)';
-      ctx.fillRect(x + i * 12, y + 2, 8, 10);
-      ctx.fillStyle = i < p.potions ? '#a07020' : 'rgba(255,255,255,0.1)';
-      ctx.fillRect(x + i * 12 + 2, y, 4, 2);
+      const full = i < p.potions;
+      ctx.fillStyle = '#05030a';
+      ctx.fillRect(x + i * 12 - 1, y + 1, 10, 12);
+      ctx.fillStyle = full ? '#e0a040' : 'rgba(255,255,255,0.12)';
+      ctx.fillRect(x + i * 12, y + 3, 8, 9);
+      if (full) {
+        ctx.fillStyle = '#ffe6a0';
+        ctx.fillRect(x + i * 12 + 1, y + 4, 3, 4);
+      }
+      ctx.fillStyle = full ? '#7a5020' : 'rgba(255,255,255,0.1)';
+      ctx.fillRect(x + i * 12 + 2, y + 1, 4, 2);
     }
     text(ctx, g.input.keyName('potion'), x + Math.max(1, p.potions) * 12 + 4 + Math.max(0, Math.round(p.stats.potions) - p.potions) * 12, y, C.dim, 11);
     if (run) {
       y += 18;
       const need = xpForLevel(run.level);
-      bar(ctx, x, y, 200, 5, run.xp / need, C.xp);
-      textShadow(ctx, `Lv ${run.level}`, x + 206, y - 4, '#d8b0ff', 11, 'left', true);
+      bar(ctx, x, y, 190, 4, run.xp / need, C.xp);
+      textShadow(ctx, `Lv ${run.level}`, x + 196, y - 4, '#d8b0ff', 11, 'left', true);
     }
     // ── skills ──
     this.drawSkills(ctx, g);
     // ── buffs ──
     let bx = 16;
-    const by = run ? 96 : 82;
+    const by = run ? 90 : 78;
     for (const b of p.buffs) {
       if (b.dur <= 1) continue;
       ctx.fillStyle = 'rgba(8,6,12,0.7)';
@@ -122,7 +129,7 @@ export abstract class PlayScene implements Scene {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(pulse, pulse);
-      textShadow(ctx, `${p.combo}`, 0, 0, p.combo >= 50 ? '#ff8a3d' : p.combo >= 20 ? '#ffd23c' : '#fff', 30, 'right', true);
+      heading(ctx, `${p.combo}`, 0, 0, p.combo >= 50 ? '#ff8a3d' : p.combo >= 20 ? '#ffd23c' : '#fff', 32, 'right');
       ctx.restore();
       textShadow(ctx, 'HITS', cx, cy + 34, C.dim, 12, 'right', true);
       bar(ctx, cx - 60, cy + 50, 60, 3, p.comboTimer / 150, '#ffd23c');
@@ -137,8 +144,9 @@ export abstract class PlayScene implements Scene {
       const b = this.roomBanner;
       const a = b.t < 300 ? b.t / 300 : b.t > 2000 ? Math.max(0, 1 - (b.t - 2000) / 600) : 1;
       ctx.globalAlpha = a;
-      textShadow(ctx, b.text, UI_W / 2, 118, C.title, 26, 'center', true);
-      textShadow(ctx, b.sub, UI_W / 2, 150, C.dim, 14, 'center');
+      heading(ctx, b.text, UI_W / 2, 116, C.title, 28, 'center');
+      ornamentLine(ctx, UI_W / 2, 152, 160);
+      textShadow(ctx, b.sub, UI_W / 2, 158, '#c8b8a8', 14, 'center');
       ctx.globalAlpha = 1;
     }
   }
@@ -158,35 +166,58 @@ export abstract class PlayScene implements Scene {
     const sy = UI_H - 64;
     slots.forEach((s, i) => {
       const x = sx + i * 62;
-      ctx.fillStyle = 'rgba(8,6,12,0.7)';
+      ctx.fillStyle = '#05030a';
+      ctx.fillRect(x - 1, sy - 1, 58, 64);
+      const bgr = ctx.createLinearGradient(0, sy, 0, sy + 48);
+      bgr.addColorStop(0, s.ok ? 'rgba(50,38,60,0.95)' : 'rgba(26,20,32,0.92)');
+      bgr.addColorStop(1, 'rgba(10,7,14,0.95)');
+      ctx.fillStyle = bgr;
       ctx.fillRect(x, sy, 56, 48);
-      ctx.strokeStyle = s.ok ? s.color : 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + 1, sy + 1, 54, 46);
-      if (s.cd > 0) {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(x + 2, sy + 2, 52, 44 * (s.cd / s.cdMax));
-        textShadow(ctx, (s.cd / 60).toFixed(1), x + 28, sy + 16, '#fff', 13, 'center', true);
+      ctx.strokeStyle = s.ok ? s.color : 'rgba(200,160,90,0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 2.5, sy + 2.5, 51, 43);
+      if (s.ok) {
+        ctx.globalAlpha = 0.15 + Math.sin(g.t / 300 + i) * 0.08;
+        ctx.fillStyle = s.color;
+        ctx.fillRect(x + 3, sy + 3, 50, 42);
+        ctx.globalAlpha = 1;
       }
-      text(ctx, s.name, x + 28, sy + 6, s.ok ? s.color : C.dim, 11, 'center', true);
-      if (s.cost) text(ctx, `${s.cost}`, x + 28, sy + 30, s.ok ? '#9fc8ff' : '#556', 11, 'center');
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fillRect(x + 2, sy + 48, 52, 14);
-      text(ctx, s.key, x + 28, sy + 49, C.text, 11, 'center', true);
+      if (s.cd > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(x + 3, sy + 3, 50, 42 * (s.cd / s.cdMax));
+        textShadow(ctx, (s.cd / 60).toFixed(1), x + 28, sy + 17, '#fff', 13, 'center', true);
+      }
+      ctx.font = titleFont(10);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = s.ok ? s.color : C.dim;
+      ctx.fillText(s.name, x + 28, sy + 7);
+      if (s.cost) text(ctx, `${s.cost}`, x + 28, sy + 29, s.ok ? '#9fc8ff' : '#556', 12, 'center', true);
+      const kg = ctx.createLinearGradient(0, sy + 48, 0, sy + 62);
+      kg.addColorStop(0, '#3a2e48');
+      kg.addColorStop(1, '#1c1424');
+      ctx.fillStyle = kg;
+      ctx.fillRect(x, sy + 49, 56, 13);
+      text(ctx, s.key, x + 28, sy + 49, '#f4ead8', 11, 'center', true);
     });
-    text(ctx, ms.name.toUpperCase(), sx + 192, sy + 6, '#c8b8a0', 12, 'left', true);
+    ctx.font = titleFont(12);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#d8c8a8';
+    ctx.fillText(ms.name.toUpperCase(), sx + 194, sy + 6);
     text(ctx, ATTACK_NAMES(p), sx + 192, sy + 22, C.dim, 11);
   }
 
   private drawBossBar(ctx: Ctx, b: Boss): void {
-    const w = 400;
-    const x = (UI_W - w) / 2;
+    const w = 380;
+    const x = 326;
     const y = 34;
     const f = Math.max(0, b.hp / b.maxHp);
     this.bossGhost = Math.max(f, this.bossGhost - 0.002);
-    ctx.fillStyle = 'rgba(8,6,12,0.75)';
-    ctx.fillRect(x - 8, y - 22, w + 16, 46);
-    textShadow(ctx, `${b.bossDef.name} — ${b.bossDef.title}`, x, y - 19, '#ffd0c0', 14, 'left', true);
+    hudPlate(ctx, x - 12, y - 26, w + 24, 52);
+    heading(ctx, b.bossDef.name, x, y - 20, '#ffd8c8', 14);
+    ctx.font = titleFont(14);
+    const nw = ctx.measureText(b.bossDef.name).width;
+    text(ctx, b.bossDef.title, x + nw + 10, y - 18, '#a08a90', 12);
     bar(ctx, x, y, w, 12, f, '#c03030', 'rgba(0,0,0,0.7)', this.bossGhost);
     for (const th of b.thresholds) {
       ctx.fillStyle = '#ffd27a';
@@ -224,4 +255,72 @@ export abstract class PlayScene implements Scene {
 function ATTACK_NAMES(p: World['player']): string {
   if (p.state === 'attack' && p.atk) return p.atk.def.name;
   return '';
+}
+
+/** Dark translucent HUD plate with a gold hairline and corner studs. */
+function hudPlate(ctx: Ctx, x: number, y: number, w: number, h: number): void {
+  const grad = ctx.createLinearGradient(0, y, 0, y + h);
+  grad.addColorStop(0, 'rgba(24,18,32,0.82)');
+  grad.addColorStop(1, 'rgba(8,6,12,0.7)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(200,160,90,0.45)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.fillStyle = '#d8a860';
+  for (const [cx, cy] of [[x, y], [x + w - 3, y], [x, y + h - 3], [x + w - 3, y + h - 3]]) ctx.fillRect(cx, cy, 3, 3);
+}
+
+/** The player's lantern emblem; its flame shrinks as HP drops. */
+function lanternEmblem(ctx: Ctx, x: number, y: number, hpF: number, t: number): void {
+  ctx.fillStyle = '#05030a';
+  ctx.beginPath();
+  ctx.arc(x, y, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#d8a860';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x, y, 18, 0, Math.PI * 2);
+  ctx.stroke();
+  const glow = ctx.createRadialGradient(x, y + 2, 0, x, y + 2, 17);
+  glow.addColorStop(0, `rgba(255,190,90,${0.35 + hpF * 0.4})`);
+  glow.addColorStop(1, 'rgba(255,190,90,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - 18, y - 18, 36, 36);
+  // lantern cage
+  ctx.fillStyle = '#6a4a2a';
+  ctx.fillRect(x - 6, y - 10, 12, 2);
+  ctx.fillRect(x - 6, y + 8, 12, 2);
+  ctx.fillRect(x - 6, y - 8, 1, 16);
+  ctx.fillRect(x + 5, y - 8, 1, 16);
+  ctx.fillRect(x - 1, y - 13, 2, 3);
+  // flame
+  const fh = 3 + hpF * 9 + Math.sin(t / 90) * 1;
+  ctx.fillStyle = hpF < 0.3 ? '#ff6040' : '#ffb040';
+  ctx.beginPath();
+  ctx.moveTo(x - 3.5, y + 7);
+  ctx.quadraticCurveTo(x - 4, y + 7 - fh * 0.6, x, y + 7 - fh);
+  ctx.quadraticCurveTo(x + 4, y + 7 - fh * 0.6, x + 3.5, y + 7);
+  ctx.fill();
+  ctx.fillStyle = '#fff2c0';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 5, 1.6, Math.max(1, fh * 0.35), 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function ornamentLine(ctx: Ctx, cx: number, y: number, half: number): void {
+  for (const dir of [-1, 1]) {
+    const grad = ctx.createLinearGradient(cx, 0, cx + dir * half, 0);
+    grad.addColorStop(0, 'rgba(216,168,96,0.9)');
+    grad.addColorStop(1, 'rgba(216,168,96,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(Math.min(cx, cx + dir * half), y, half, 1);
+  }
+  ctx.fillStyle = '#d8a860';
+  ctx.beginPath();
+  ctx.moveTo(cx, y - 3);
+  ctx.lineTo(cx + 3, y);
+  ctx.lineTo(cx, y + 3);
+  ctx.lineTo(cx - 3, y);
+  ctx.fill();
 }

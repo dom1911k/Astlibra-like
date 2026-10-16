@@ -19,7 +19,7 @@ import { ChoicePanel, ConfirmPanel, MenuPanel, MessagePanel } from '../ui/panels
 import { ForgePanel } from '../ui/panels/forge';
 import { SettingsPanel } from '../ui/panels/settings';
 import { ShopPanel, type Offer } from '../ui/panels/shop';
-import { C, textShadow, type Ctx } from '../ui/ui';
+import { C, heading, textShadow, type Ctx } from '../ui/ui';
 import { ArenaScene } from './arena';
 import { ExpeditionScene, controlsText } from './expedition';
 import { PlayScene } from './play';
@@ -231,7 +231,7 @@ export class HubScene extends PlayScene {
       const b = this.roomBanner;
       const a = b.t < 300 ? b.t / 300 : b.t > 2000 ? Math.max(0, 1 - (b.t - 2000) / 600) : 1;
       ctx.globalAlpha = a;
-      textShadow(ctx, b.text, UI_W / 2, 118, C.title, 26, 'center', true);
+      heading(ctx, b.text, UI_W / 2, 116, C.title, 28, 'center');
       textShadow(ctx, b.sub, UI_W / 2, 150, C.dim, 14, 'center');
       ctx.globalAlpha = 1;
     }

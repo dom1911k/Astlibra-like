@@ -1,6 +1,6 @@
 # Cinderdeep — Expeditions of the Last Lantern
 
-A 2D side-scrolling action RPG roguelite inspired by the *gameplay principles* of ASTLIBRA (crunchy real-time combat, deep equipment, learning skills from gear, an escalating power fantasy). The world, story, characters, enemies, items, names, art and audio are all original. Art is procedural pixel art and audio is synthesized at runtime, so the repo contains no asset files.
+A 2D side-scrolling action RPG roguelite inspired by the *gameplay principles* of ASTLIBRA (crunchy real-time combat, deep equipment, learning skills from gear, an escalating power fantasy). The world, story, characters, enemies, items, names, art and audio are all original. Art is procedural pixel art (outlined, shaded sprites; per-depth tilesets with ambient occlusion and baked light sources; parallax layers, light shafts, dynamic lantern lighting, colour grading). Audio is synthesized at runtime. The only bundled assets are two OFL-licensed fonts (Cinzel and Source Sans 3, via Fontsource), so the game works offline.
 
 Design document, engine choice, architecture, hit-stop design, generation approach and plan: **[docs/DESIGN.md](docs/DESIGN.md)**.
 
@@ -58,7 +58,7 @@ Keyboard bindings can be changed in Settings → Controls.
 **Working and tested:** everything in the list above is implemented and runs. The automated checks pass: unit tests, headless browser smoke test, bot-played expeditions (bots reach all three guardians and clear full expeditions, with no softlocks).
 
 **Known limitations / placeholders**
-- Art is deliberately simple procedural pixel art. Characters are readable but not hand-animated sprite sheets.
+- Characters are procedurally drawn and animated, not hand-drawn frame-by-frame sprite sheets.
 - Music is a minimal generative drone/arpeggio per area. Sound effects are synthesized.
 - Balance comes from the simulator bot plus spot checks; it has not had wide human playtesting. The Cinder Matriarch is the main difficulty spike for melee bots.
 - The bot can't pathfind every platform layout. The simulator teleports it when it makes no progress for 20 s and reports these as "assists". The room reachability test separately proves every room is completable without double jump.

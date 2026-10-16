@@ -2,7 +2,7 @@ import { UI_H, UI_W } from '../core/constants';
 import type { Game, Scene } from '../game';
 import { MessagePanel } from '../ui/panels/common';
 import { SettingsPanel } from '../ui/panels/settings';
-import { C, ListNav, hints, selRow, text, type Ctx } from '../ui/ui';
+import { C, ListNav, heading, hints, selRow, text, titleFont, type Ctx } from '../ui/ui';
 import { ExpeditionScene, controlsText } from './expedition';
 import { HubScene } from './hub';
 
@@ -54,46 +54,166 @@ export class TitleScene implements Scene {
       items[this.nav.i].action();
     }
   }
-  render(ctx: Ctx, g: Game): void {
-    const grad = ctx.createLinearGradient(0, 0, 0, UI_H);
-    grad.addColorStop(0, '#08060e');
-    grad.addColorStop(0.7, '#1a0e14');
-    grad.addColorStop(1, '#3a1a10');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, UI_W, UI_H);
-    // abyss silhouette
-    ctx.fillStyle = '#05040a';
-    ctx.beginPath();
-    ctx.moveTo(0, UI_H);
-    for (let x = 0; x <= UI_W; x += 40) ctx.lineTo(x, UI_H - 90 - Math.sin(x * 0.02) * 30 - (x % 80 === 0 ? 20 : 0));
-    ctx.lineTo(UI_W, UI_H);
-    ctx.fill();
-    for (const e of this.embers) {
-      ctx.globalAlpha = 0.4 + Math.sin(this.t / 300 + e.x) * 0.3;
-      ctx.fillStyle = e.s > 2 ? '#ffd27a' : '#ff8a3d';
-      ctx.fillRect(Math.round(e.x), Math.round(e.y), e.s, e.s);
+  private art: HTMLCanvasElement | null = null;
+  private px: HTMLCanvasElement | null = null;
+
+  /** Static pixel-art backdrop at 480x270 (rendered once). */
+  private buildArt(): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = 480;
+    c.height = 270;
+    const g = c.getContext('2d')!;
+    const sky = g.createLinearGradient(0, 0, 0, 270);
+    sky.addColorStop(0, '#07051a');
+    sky.addColorStop(0.55, '#1c1030');
+    sky.addColorStop(0.85, '#4a1c20');
+    sky.addColorStop(1, '#a04018');
+    g.fillStyle = sky;
+    g.fillRect(0, 0, 480, 270);
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+    for (let i = 0; i < 160; i++) {
+      g.fillStyle = `rgba(255,240,220,${rnd() * 0.7})`;
+      g.fillRect(Math.floor(rnd() * 480), Math.floor(rnd() * 150), 1, 1);
     }
-    ctx.globalAlpha = 1;
-    // lantern glow
-    const lg = ctx.createRadialGradient(UI_W / 2, 200, 0, UI_W / 2, 200, 260);
-    lg.addColorStop(0, 'rgba(255,170,80,0.25)');
-    lg.addColorStop(1, 'rgba(255,170,80,0)');
-    ctx.fillStyle = lg;
+    // the fallen star
+    const sg = g.createRadialGradient(330, 52, 0, 330, 52, 60);
+    sg.addColorStop(0, 'rgba(255,240,200,0.9)');
+    sg.addColorStop(0.15, 'rgba(255,190,120,0.45)');
+    sg.addColorStop(1, 'rgba(255,120,60,0)');
+    g.fillStyle = sg;
+    g.fillRect(260, 0, 140, 120);
+    g.strokeStyle = 'rgba(255,220,170,0.35)';
+    g.beginPath();
+    g.moveTo(330, 52);
+    g.lineTo(420, 6);
+    g.stroke();
+    g.fillStyle = '#fff6e0';
+    g.fillRect(328, 50, 4, 4);
+    // cliff layers, far to near
+    const layer = (color: string, base: number, amp: number, step: number) => {
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(0, 270);
+      for (let x = 0; x <= 480; x += step) g.lineTo(x, base - Math.abs(Math.sin(x * 0.031 + base)) * amp - rnd() * amp * 0.4);
+      g.lineTo(480, 270);
+      g.fill();
+    };
+    layer('#24132a', 170, 40, 12);
+    layer('#1a0e1e', 200, 30, 9);
+    // abyss glow & fog
+    const ab = g.createRadialGradient(240, 300, 10, 240, 300, 220);
+    ab.addColorStop(0, 'rgba(255,140,60,0.65)');
+    ab.addColorStop(1, 'rgba(255,90,40,0)');
+    g.fillStyle = ab;
+    g.fillRect(0, 120, 480, 150);
+    // foreground cliff (right) with the lone Wick
+    g.fillStyle = '#0a0610';
+    g.beginPath();
+    g.moveTo(480, 270);
+    g.lineTo(300, 270);
+    g.lineTo(316, 222);
+    g.lineTo(334, 214);
+    g.lineTo(370, 210);
+    g.lineTo(392, 196);
+    g.lineTo(480, 190);
+    g.fill();
+    g.beginPath();
+    g.moveTo(0, 270);
+    g.lineTo(0, 214);
+    g.lineTo(40, 226);
+    g.lineTo(70, 248);
+    g.lineTo(96, 270);
+    g.fill();
+    // the Wick silhouette
+    g.fillRect(352, 194, 6, 16);
+    g.fillRect(353, 189, 4, 5);
+    g.beginPath();
+    g.moveTo(352, 196);
+    g.lineTo(344, 208);
+    g.lineTo(352, 206);
+    g.fill();
+    g.fillRect(358, 199, 5, 1);
+    return c;
+  }
+
+  render(ctx: Ctx, g: Game): void {
+    if (!this.art) {
+      this.art = this.buildArt();
+      this.px = document.createElement('canvas');
+      this.px.width = 480;
+      this.px.height = 270;
+    }
+    const pg = this.px!.getContext('2d')!;
+    pg.drawImage(this.art, 0, 0);
+    // embers rising from the abyss
+    for (const e of this.embers) {
+      const x = Math.round(e.x / 2);
+      const y = Math.round(e.y / 2);
+      pg.globalAlpha = 0.5 + Math.sin(this.t / 300 + e.x) * 0.4;
+      pg.fillStyle = e.s > 2 ? '#ffe0a0' : '#ff8a3d';
+      pg.fillRect(x, y, 1, 1);
+    }
+    pg.globalAlpha = 1;
+    // the lantern
+    const lx = 363;
+    const ly = 201;
+    pg.globalCompositeOperation = 'lighter';
+    const lg = pg.createRadialGradient(lx, ly, 0, lx, ly, 34);
+    lg.addColorStop(0, `rgba(255,200,110,${0.75 + Math.sin(this.t / 120) * 0.08})`);
+    lg.addColorStop(0.3, 'rgba(255,170,80,0.22)');
+    lg.addColorStop(1, 'rgba(255,140,60,0)');
+    pg.fillStyle = lg;
+    pg.fillRect(lx - 34, ly - 34, 68, 68);
+    pg.globalCompositeOperation = 'source-over';
+    pg.fillStyle = '#fff2c0';
+    pg.fillRect(lx - 1, ly - 1, 2, 3);
+    // fluttering cloak
+    pg.fillStyle = '#0a0610';
+    pg.beginPath();
+    pg.moveTo(352, 197);
+    pg.lineTo(343 + Math.sin(this.t / 240) * 2, 203 + Math.sin(this.t / 170));
+    pg.lineTo(351, 204);
+    pg.fill();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.px!, 0, 0, UI_W, UI_H);
+    // vignette
+    const vg = ctx.createRadialGradient(UI_W / 2, UI_H / 2, UI_H * 0.3, UI_W / 2, UI_H / 2, UI_W * 0.65);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = vg;
     ctx.fillRect(0, 0, UI_W, UI_H);
-    text(ctx, 'CINDERDEEP', UI_W / 2, 140, '#ffd27a', 64, 'center', true);
-    text(ctx, 'Expeditions of the Last Lantern', UI_W / 2, 214, '#c8a8a0', 18, 'center');
+    // logo
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,150,60,0.8)';
+    ctx.shadowBlur = 28;
+    heading(ctx, 'CINDERDEEP', UI_W / 2 - 150, 92, '#ffd890', 60, 'center');
+    ctx.restore();
+    heading(ctx, 'CINDERDEEP', UI_W / 2 - 150, 92, '#ffe6b0', 60, 'center');
+    ctx.font = titleFont(15);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#d8b8a0';
+    ctx.fillText('EXPEDITIONS  OF  THE  LAST  LANTERN', UI_W / 2 - 150, 166);
+    for (const dir of [-1, 1]) {
+      const gr = ctx.createLinearGradient(UI_W / 2 - 150, 0, UI_W / 2 - 150 + dir * 220, 0);
+      gr.addColorStop(0, 'rgba(216,168,96,0.9)');
+      gr.addColorStop(1, 'rgba(216,168,96,0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(Math.min(UI_W / 2 - 150, UI_W / 2 - 150 + dir * 220), 192, 220, 1);
+    }
     if (!this.started) {
-      ctx.globalAlpha = 0.5 + Math.sin(this.t / 300) * 0.5;
-      text(ctx, 'Press any key', UI_W / 2, 340, C.text, 18, 'center', true);
+      ctx.globalAlpha = 0.45 + Math.sin(this.t / 350) * 0.4;
+      heading(ctx, 'Press any key', UI_W / 2 - 150, 330, '#f4ead8', 18, 'center');
       ctx.globalAlpha = 1;
     } else {
       this.items(g).forEach((it, i) => {
-        const y = 300 + i * 38;
-        selRow(ctx, UI_W / 2 - 170, y, 340, 32, this.nav.i === i, g.t);
-        text(ctx, it.label, UI_W / 2, y + 8, this.nav.i === i ? C.title : C.text, 16, 'center', true);
+        const y = 250 + i * 42;
+        const x0 = UI_W / 2 - 150 - 170;
+        selRow(ctx, x0, y, 340, 34, this.nav.i === i, g.t);
+        heading(ctx, it.label, UI_W / 2 - 150, y + 9, this.nav.i === i ? C.title : '#cfc2b0', 16, 'center');
       });
       hints(ctx, g.input, [['up', 'Choose'], ['confirm', 'Select']]);
     }
-    text(ctx, 'Keyboard & gamepad supported · v0.1', 16, UI_H - 24, '#5a5068', 12);
+    text(ctx, 'Keyboard & gamepad supported · v0.2', 16, UI_H - 24, '#6a5c74', 12);
   }
 }
