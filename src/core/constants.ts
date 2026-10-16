@@ -1,0 +1,9 @@
+export const TICK_HZ = 60;
+export const TICK_MS = 1000 / TICK_HZ;
+export const VIEW_W = 480;
+export const VIEW_H = 270;
+export const UI_W = 960;
+export const UI_H = 540;
+export const TILE = 16;
+export const GRAVITY = 0.42;
+export const MAX_FALL = 7.5;

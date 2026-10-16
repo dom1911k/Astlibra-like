@@ -1,0 +1,8 @@
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  base: './',
+  build: { target: 'es2022', outDir: 'dist', sourcemap: true },
+  server: { port: 5173 },
+  test: { include: ['tests/**/*.test.ts'] },
+} as any);
