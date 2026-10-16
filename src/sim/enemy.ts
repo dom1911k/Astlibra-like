@@ -318,7 +318,7 @@ export class Enemy implements Body {
     this.attack = null;
     this.vx = dir * Math.abs(kb[0]) * kbs * (this.def.heavy ? 0.4 : 1);
     if (this.state === 'stagger') {
-      this.hitstun = Math.max(this.hitstun, 20);
+      if (!this.isBoss) this.hitstun = Math.max(this.hitstun, 20);
       if (canLaunch || (!this.onGround && !this.def.flying)) this.vy = Math.min(this.vy, kb[1]);
       return 'stagger';
     }
@@ -410,7 +410,19 @@ export class Enemy implements Body {
   protected walk(w: World, vx: number, turn = true): void {
     if (vx === 0) return;
     const ahead = this.x + Math.sign(vx) * (this.w / 2 + 4);
-    if (this.onGround && !w.room.groundBelow(ahead, this.y)) {
+    // melee chasers follow the player down off ledges and through planks
+    const chaser = this.def.ai === 'skitter' || this.def.ai === 'tick' || this.def.ai === 'duelist' || this.def.ai === 'knight';
+    const playerBelow = w.player.y > this.y + 24;
+    if (chaser && playerBelow && this.onGround) {
+      const tx = Math.floor(this.x / 16);
+      const ty = Math.round(this.y / 16);
+      if (w.room.at(tx, ty) === 2 && Math.abs(w.player.x - this.x) < 60) {
+        this.dropT = 10;
+        this.onGround = false;
+        this.y += 1;
+      }
+    }
+    if (this.onGround && !w.room.groundBelow(ahead, this.y) && !(chaser && playerBelow && !this.dangerBelow(w, ahead))) {
       this.vx = 0;
       return;
     }
@@ -420,6 +432,12 @@ export class Enemy implements Body {
     }
     this.vx = vx;
     if (turn) this.face(vx);
+  }
+
+  /** Would stepping off at column `x` land on spikes (or nothing)? */
+  private dangerBelow(w: World, x: number): boolean {
+    const fy = w.room.floorBelow(x, this.y + 2);
+    return w.room.at(Math.floor(x / 16), Math.floor(fy / 16)) === 3;
   }
 
   protected ready(a: EnemyAttack): boolean {
@@ -650,12 +668,14 @@ export class Enemy implements Body {
       this.lightHits.length = 0;
       return false;
     }
+    if (this.state === 'stagger' || (this.cooldowns.guard ?? 0) > 0) return false;
     this.lightHits.push(w.tick);
     this.lightHits = this.lightHits.filter((t) => w.tick - t < 70);
-    if (this.lightHits.length >= 3 && this.state !== 'stagger' && this.onGround && fromFront) {
+    if (this.lightHits.length >= 4 && this.onGround && fromFront) {
       this.lightHits.length = 0;
       this.attack = null;
       this.setState('guard');
+      this.cooldowns.guard = 150;
       this.vx = -this.facing * 2;
       w.emit({ t: 'text', x: this.x, y: this.y - this.h - 6, text: 'GUARD', color: '#ff5c5c' });
       return true;

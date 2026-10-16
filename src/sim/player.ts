@@ -87,6 +87,8 @@ export class Player implements Body {
   derived!: Derived;
   moveset!: Moveset;
   airHits = 0;
+  /** air attacks started since last landing — limits hovering so air combos can't stall forever */
+  airAttacks = 0;
   flash = 0;
   shakeT = 0;
   runPhase = 0;
@@ -244,6 +246,7 @@ export class Player implements Body {
       this.airJumpsUsed = 0;
       this.airDodged = false;
       this.airHits = 0;
+      this.airAttacks = 0;
       this.jumpRising = false;
       this.landT = 6;
       w.emit({ t: 'sfx', id: 'land', vol: 0.35 });
@@ -471,6 +474,8 @@ export class Player implements Body {
 
   // ─────────────────────────────── attacks ───────────────────────────────
   startAttack(w: World, def: AttackDef): void {
+    const dirX = (w.input.held('right') ? 1 : 0) - (w.input.held('left') ? 1 : 0);
+    if (dirX !== 0 && def.kind !== 'art') this.facing = dirX;
     this.setState('attack');
     this.atk = {
       def, t: 0, charge: 0, released: false, chargedFull: false, reg: new Map(), projDone: false, prevBox: null,
@@ -517,16 +522,17 @@ export class Player implements Body {
 
     // ---- movement ----
     let g = 1;
-    if (!this.onGround && d.gravity !== undefined) g = d.gravity;
+    if (!this.onGround && d.gravity !== undefined) g = this.airAttacks > 5 ? 1 : d.gravity;
     if (a.t < activeStart) {
       if (d.moveStartup) this.vx = d.moveStartup[0] * this.facing;
       else this.vx = approach(this.vx, 0, this.onGround ? 0.5 : 0.1);
-      if (!this.onGround && d.gravity !== undefined) this.vy *= 0.6;
+      if (!this.onGround && d.gravity !== undefined && this.airAttacks <= 5) this.vy *= 0.6;
     } else if (inActive) {
       if (d.moveActive) this.vx = d.moveActive[0] * this.facing;
       else this.vx = approach(this.vx, 0, this.onGround ? 0.5 : 0.1);
     } else this.vx = approach(this.vx, 0, this.onGround ? 0.6 : 0.12);
     if (!this.onGround && !d.plunge) this.horizontalAirDrift(dirX);
+    if (Math.sign(this.vx) === this.facing && Math.abs(this.vx) > 0.5 && w.enemyAhead(this, 10)) this.vx = 0;
 
     if (justActive) this.onActiveStart(w, a);
 
@@ -601,7 +607,7 @@ export class Player implements Body {
       this.onGround = false;
       this.jumpRising = false;
     }
-    if (!this.onGround && d.kind === 'air') this.vy = Math.min(this.vy, -0.6);
+    if (!this.onGround && d.kind === 'air' && ++this.airAttacks <= 5) this.vy = Math.min(this.vy, -0.6);
     const proj = a.chargedFull && d.charge?.projectileAt ? d.charge.projectileAt : d.projectile;
     if (proj && !a.projDone) {
       a.projDone = true;

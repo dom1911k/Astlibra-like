@@ -34,7 +34,7 @@ async function press(page: Page, key: string, hold = 60) {
 }
 
 async function main() {
-  const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
+  const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe', detached: true });
   const errors: string[] = [];
   try {
     await waitForServer(`http://localhost:${PORT}/`);
@@ -115,13 +115,18 @@ async function main() {
     console.log('state:', JSON.stringify(stats));
     await browser.close();
   } finally {
-    server.kill();
+    try {
+      process.kill(-server.pid!, 'SIGTERM');
+    } catch {
+      server.kill();
+    }
   }
   if (errors.length) {
     console.error('Console errors:\n' + errors.join('\n'));
     process.exit(1);
   }
   console.log('Smoke test passed. Screenshots in', OUT);
+  process.exit(0);
 }
 
 main().catch((e) => {

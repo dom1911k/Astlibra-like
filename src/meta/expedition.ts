@@ -186,10 +186,12 @@ export function buildEncounter(room: Room, node: MapNode, depth: number, diffIdx
     const b = room.boss ?? room.ground[0] ?? room.player;
     return [[{ id, x: b.x, y: b.y, opts: { hpMult: diff.hp, atkMult: diff.atk }, boss: true }]];
   }
-  const pool = Object.values(ENEMIES).filter((e) => e.minDepth <= depth && e.ai !== 'dummy');
+  // opening rooms of the first depth avoid the complex archetypes so players can learn the basics
+  const gentle = depth === 1 && node.layer <= 1;
+  const pool = Object.values(ENEMIES).filter((e) => e.minDepth <= depth && e.ai !== 'dummy' && e.ai !== 'boss' && !(gentle && e.cost >= 3));
   const groundPool = pool.filter((e) => !e.flying);
   const flyPool = pool.filter((e) => e.flying);
-  let budget = 3 + depth * 2 + node.layer * 0.9 + diffIdx;
+  let budget = (gentle ? 3 : 3 + depth * 2 + node.layer * 0.9) + diffIdx;
   const waves: WaveSpawn[][] = [];
   const nWaves = node.type === 'challenge' ? 3 : node.layer >= 3 || depth > 1 ? 2 : 1;
   const per = budget / nWaves;

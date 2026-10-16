@@ -98,7 +98,7 @@ const MOVES: Record<string, BossMove[]> = {
   ],
   matriarch: [
     {
-      id: 'dive', windup: 30, active: 36, recover: 30, cooldown: 90, weight: 3, hitbox: { x: -20, y: -26, w: 40, h: 26 }, motion: 1.1, kb: [5, -2], range: [0, 999],
+      id: 'dive', windup: 30, active: 36, recover: 75, cooldown: 90, weight: 3, hitbox: { x: -20, y: -26, w: 40, h: 26 }, motion: 1.1, kb: [5, -2], range: [0, 999],
       windupTick: (b, w) => { b.vy = -0.6; b.vx *= 0.9; b.targetX = w.player.x; b.targetY = w.player.y - 8; },
       activeTick: (b, w, t) => {
         if (t === 1) {
@@ -109,7 +109,15 @@ const MOVES: Record<string, BossMove[]> = {
         b.vx *= 0.98;
         b.vy *= 0.97;
       },
-      recoverTick: (b) => { b.vy -= 0.12; b.vx *= 0.94; },
+      recoverTick: (b, w, t) => {
+        // after a dive she lingers near the ground, dazed by the impact: the punish window
+        if (t < 50) {
+          b.vx *= 0.85;
+          const floor = w.room.floorBelow(b.x, b.y - 4);
+          b.vy = b.y < floor - 2 ? 2 : 0;
+          b.telegraph = 0;
+        } else b.vy -= 0.12;
+      },
     },
     {
       id: 'fan', windup: 26, active: 20, recover: 30, cooldown: 110, weight: 2.5, range: [0, 999],
@@ -249,7 +257,7 @@ export class Boss extends Enemy {
   constructor(id: string, x: number, y: number, opts: SpawnOpts = {}) {
     const bd = BOSSES[id];
     const def: EnemyDef = {
-      id: bd.id, name: bd.name, desc: bd.desc, role: 'Boss', ai: 'dummy', hp: bd.hp, atk: bd.atk, def: bd.def, poise: bd.poise, speed: 1.2,
+      id: bd.id, name: bd.name, desc: bd.desc, role: 'Boss', ai: 'boss', hp: bd.hp, atk: bd.atk, def: bd.def, poise: bd.poise, speed: 1.2,
       w: bd.w, h: bd.h, heavy: true, flying: id === 'matriarch', xp: bd.xp, gilt: bd.gilt, color: bd.color, accent: bd.accent, attacks: [], aggro: 9999, minDepth: 99, cost: 0,
     };
     super(def, x, y, { ...opts, noSpawnAnim: true });
@@ -330,23 +338,7 @@ export class Boss extends Enemy {
       if (this.roar === 0) this.idleT = 10;
       return;
     }
-    // phase transitions
-    const next = this.thresholds[this.phase - 1];
-    if (next !== undefined && this.hp <= this.maxHp * next + 0.5) {
-      this.phase++;
-      this.roar = 70;
-      this.move = null;
-      this.speedMult = 1 + (this.phase - 1) * 0.15;
-      this.state = 'idle';
-      w.emit({ t: 'bossPhase', phase: this.phase });
-      w.emit({ t: 'text', x: this.x, y: this.y - this.h - 14, text: this.phase === 2 ? 'ENRAGED' : 'FINAL FORM', color: '#ff5040', big: true });
-      w.emit({ t: 'sfx', id: 'boss' });
-      w.emit({ t: 'shake', amt: 6, dur: 30 });
-      w.emit({ t: 'flash', color: '#ff4020', dur: 10, alpha: 0.3 });
-      // shove the player away so the transition is readable
-      if (Math.abs(dx) < 80) w.player.vx = Math.sign(dx || 1) * 5;
-      return;
-    }
+    if (this.checkPhase(w)) return;
     for (const k in this.moveCd) if (this.moveCd[k] > 0) this.moveCd[k]--;
     if (!this.move) {
       this.state = 'idle';
@@ -411,10 +403,37 @@ export class Boss extends Enemy {
     }
   }
 
+  /** Phase transitions run regardless of state so a staggered boss can't stall at a phase gate. */
+  update(w: World): void {
+    if (this.state !== 'dead' && this.state !== 'spawn') this.checkPhase(w);
+    super.update(w);
+  }
+
+  private checkPhase(w: World): boolean {
+    const next = this.thresholds[this.phase - 1];
+    if (next === undefined || this.hp > this.maxHp * next + 0.5) return false;
+    const dx = w.player.x - this.x;
+    this.phase++;
+    this.roar = 70;
+    this.move = null;
+    this.hitstun = 0;
+    this.speedMult = 1 + (this.phase - 1) * 0.15;
+    this.state = 'idle';
+    this.st = 0;
+    w.emit({ t: 'bossPhase', phase: this.phase });
+    w.emit({ t: 'text', x: this.x, y: this.y - this.h - 14, text: this.phase === 2 ? 'ENRAGED' : 'FINAL FORM', color: '#ff5040', big: true });
+    w.emit({ t: 'sfx', id: 'boss' });
+    w.emit({ t: 'shake', amt: 6, dur: 30 });
+    w.emit({ t: 'flash', color: '#ff4020', dur: 10, alpha: 0.3 });
+    // shove the player away so the transition is readable
+    if (Math.abs(dx) < 80) w.player.vx = Math.sign(dx || 1) * 5;
+    return true;
+  }
+
   private hover(w: World): void {
     const p = w.player;
     const tx = p.x + Math.sin(w.tick / 90) * 90;
-    const ty = p.y - 90 + Math.sin(w.tick / 25) * 8;
+    const ty = p.y - 64 + Math.sin(w.tick / 25) * 8;
     this.vx += clamp((tx - this.x) * 0.006, -0.12, 0.12);
     this.vy += clamp((ty - this.cy) * 0.01, -0.15, 0.15);
     this.vx = clamp(this.vx, -2, 2) * 0.97;

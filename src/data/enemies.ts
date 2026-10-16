@@ -19,7 +19,7 @@ export interface EnemyAttack {
   weight?: number;
 }
 
-export type AiKind = 'skitter' | 'knight' | 'spitter' | 'moth' | 'shepherd' | 'tick' | 'duelist' | 'dummy';
+export type AiKind = 'skitter' | 'knight' | 'spitter' | 'moth' | 'shepherd' | 'tick' | 'duelist' | 'dummy' | 'boss';
 
 export interface EnemyDef {
   id: string;
@@ -72,7 +72,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'thornspitter', name: 'Thornspitter', desc: 'A rooted bulb that lobs bursting spore-pods. Keeps its distance and shrinks back into the soil when rushed.', role: 'Ranged artillery',
     ai: 'spitter', hp: 52, atk: 10, def: 3, poise: 12, speed: 0.9, w: 14, h: 18, xp: 9, gilt: 5, color: '#3f5a36', accent: '#d6ff5c', aggro: 260, minDepth: 1, cost: 2,
     attacks: [
-      { id: 'pod', windup: 26, active: 2, recovery: 40, motion: 1, kb: [2, -2], range: [40, 260], cooldown: 80, projectile: { kind: 'spore', speed: 3.4, angle: -0.9, w: 8, h: 8, life: 140, gravity: 0.12, motion: 1, explode: { radius: 18, motion: 0.8 } } },
+      { id: 'pod', windup: 26, active: 2, recovery: 40, motion: 1, kb: [2, -2], range: [40, 260], cooldown: 115, projectile: { kind: 'spore', speed: 3.4, angle: -0.9, w: 8, h: 8, life: 140, gravity: 0.12, motion: 1, explode: { radius: 18, motion: 0.8 } } },
       { id: 'bramble', windup: 16, active: 6, recovery: 30, hitbox: { x: -18, y: -22, w: 36, h: 22 }, motion: 0.8, kb: [4, -3], range: [0, 26], cooldown: 70 },
     ],
   },
@@ -109,7 +109,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
   },
   cinder_golem: {
     id: 'cinder_golem', name: 'Cinder Golem', desc: 'Slag and starstone packed around a hot core. Immune to fire, slow, and hits like a collapsing mine shaft.', role: 'Juggernaut',
-    ai: 'knight', hp: 260, atk: 20, def: 14, poise: 140, speed: 0.55, w: 22, h: 32, heavy: true, xp: 30, gilt: 18, color: '#4a3530', accent: '#ff6a2a', aggro: 200, minDepth: 2, cost: 4,
+    ai: 'knight', hp: 210, atk: 20, def: 9, poise: 120, speed: 0.55, w: 22, h: 32, heavy: true, xp: 30, gilt: 18, color: '#4a3530', accent: '#ff6a2a', aggro: 200, minDepth: 2, cost: 4,
     resist: { fire: 1 },
     attacks: [
       { id: 'slam', windup: 40, active: 6, recovery: 40, hitbox: { x: -6, y: -40, w: 46, h: 40 }, motion: 1.5, kb: [5, -4], range: [0, 46], cooldown: 120, unblockable: true, projectile: { kind: 'wave', speed: 3.4, w: 12, h: 16, life: 40, motion: 0.7, ground: true, pierce: 99, element: 'fire', offset: [30, 0] } },
@@ -152,7 +152,7 @@ export const BOSSES: Record<string, BossDef> = {
   },
   matriarch: {
     id: 'matriarch', name: 'Cinder Matriarch', title: 'Mother of Moths', desc: 'An enormous moth-queen whose wings shed burning dust. Dives, fans spores, and darkens the sky with her brood.',
-    hp: 3600, atk: 22, def: 9, poise: 300, w: 46, h: 30, depth: 2, color: '#5a4870', accent: '#ffd36a', xp: 220, gilt: 160,
+    hp: 3100, atk: 22, def: 9, poise: 280, w: 46, h: 30, depth: 2, color: '#5a4870', accent: '#ffd36a', xp: 220, gilt: 160,
   },
   vessel: {
     id: 'vessel', name: 'The Pale Vessel', title: 'Hollow of the Fallen Star', desc: 'A duelist hollowed out and filled with starlight. Lightning-fast sword strings, teleports, and a final Judgment that must be dodged.',

@@ -18,7 +18,7 @@ export interface BuildBreakdown {
 
 export function levelStats(level: number): Partial<Stats> {
   const l = level - 1;
-  return { maxHp: l * 8, atk: l * 1.3, magic: l * 1.3, def: l * 0.7, maxMp: l * 2 };
+  return { maxHp: l * 9, atk: l * 1.8, magic: l * 1.8, def: l * 0.8, maxMp: l * 2, critChance: l * 0.004 };
 }
 
 /** Aggregate every stat/proc source into the simulation loadout. Deterministic & pure. */

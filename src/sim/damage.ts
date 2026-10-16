@@ -38,7 +38,7 @@ const KIND_STAT: Partial<Record<AttackKind, keyof Stats>> = {
 const ELEM_PCT: Record<Element, keyof Stats | null> = { phys: null, fire: 'firePct', shock: 'shockPct', frost: 'frostPct' };
 
 export function defenseFactor(def: number): number {
-  return 60 / (60 + Math.max(0, def) * 3);
+  return 80 / (80 + Math.max(0, def) * 3);
 }
 
 /** Pure, deterministic (given rng) damage calculation used by every hit in the game. */

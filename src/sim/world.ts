@@ -274,6 +274,16 @@ export class World {
     }
   }
 
+  /** Is a living enemy body directly in front of the player (used to stop attack lunges)? */
+  enemyAhead(p: Player, gap: number): boolean {
+    for (const e of this.enemies) {
+      if (!e.alive || e.def.flying) continue;
+      const front = p.facing > 0 ? e.x - e.w / 2 - (p.x + p.w / 2) : p.x - p.w / 2 - (e.x + e.w / 2);
+      if (front < gap && front > -e.w && Math.abs(e.y - p.y) < Math.max(e.h, p.h)) return true;
+    }
+    return false;
+  }
+
   // ─────────────────────────────── player offense ───────────────────────────────
   playerPower(scaling: HitInfo['scaling']): number {
     const d = this.player.derived;
@@ -398,7 +408,7 @@ export class World {
       const oy = spec.offset?.[1] ?? -12;
       const kind: AttackKind = d.kind === 'art' ? 'art' : d.kind === 'riposte' ? 'riposte' : d.kind === 'heavy' ? 'heavy' : 'light';
       const info = this.projInfo(spec, kind, p.facing, 0, scaling);
-      if (d.charge) info.motion = spec.motion * (1 + chargeK * (d.charge.motionAt / d.motion - 1));
+      if (d.charge) info.motion = spec.motion * (d.motion > 0 ? 1 + chargeK * (d.charge.motionAt / d.motion - 1) : 1 + chargeK * (d.charge.motionAt - 1));
       let x = p.x + ox;
       if (spec.kind === 'star') x = p.x + p.facing * (20 + i * 26) + (spec.offset?.[0] ?? 0) * p.facing;
       const vx = Math.cos(ang) * spec.speed * p.facing;
@@ -443,7 +453,15 @@ export class World {
     const guardKinds = info.kind === 'light' || info.kind === 'air' || info.kind === 'proc';
     let guarded = false;
     if (info.depth === 0 && e.duelistGuardCheck(this, info.kind, fromFront)) guarded = true;
-    if (e.state === 'guard' && fromFront) guarded = true;
+    if (e.state === 'guard' && fromFront) {
+      if (info.heavy || info.kind === 'riposte' || info.kind === 'art') {
+        // heavy blows shatter a duelist's guard — rewards varying your rhythm
+        e.poiseDmg = e.poiseMax;
+        e.setState('idle');
+        this.emit({ t: 'text', x: e.x, y: e.y - e.h - 8, text: 'GUARD BREAK', color: '#ffd23c', big: true });
+        this.accumulateHitStop('guardBreak', 1);
+      } else guarded = true;
+    }
     if (!guarded && e.def.frontGuard && fromFront && guardKinds && e.state !== 'stagger' && e.state !== 'windup' && e.state !== 'active' && e.status.frozen <= 0) guarded = true;
     const res = computeDamage({
       power: this.playerPower(info.scaling), motion: info.motion, kind: info.kind, element: info.element, stats: p.stats,
@@ -777,6 +795,10 @@ export class World {
   playerDied(): void {
     const p = this.player;
     if (p.dead) return;
+    if (Tuning.godMode) {
+      p.hp = 1;
+      return;
+    }
     p.dead = true;
     p.hp = 0;
     p.setState('dead');
