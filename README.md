@@ -21,7 +21,24 @@ npm run preview    # serve the production build
 | `npm run sim -- --runs 4` | Headless playtest simulator: time-to-kill matrix (5 weapons × 8 enemies) and full bot-played expeditions with power-curve, upgrade timing, deaths and guardian kills |
 | `npm run build && npm run smoke` | Launches the built game in headless Chromium, plays title → hub → training grounds → combos → menus, fails on console errors, saves screenshots to `tools/out/` |
 
-## Controls
+## Playtesting
+
+**Fastest:** open `play/cinderdeep.html` (double-click it). It's the whole game in one file — no install, no internet, saves in that browser. Rebuild it with `npm run build:single`.
+
+**From source:** double-click `play.bat` (Windows) or `play.command` (macOS/Linux), or run `npm run play`. These install dependencies on first run and open the game in your browser.
+
+**In-game tools (any scene):**
+
+| Key | What it does |
+|---|---|
+| **F2** | Playtest tools: god mode, damage ×5/×100, infinite Aether, slow-motion (×0.25/×0.5) and fast-forward, +1000 Cinders/Gilt/materials, unlock the whole Starboard, master equipped gear, 5 random rare+ items. In the hub: start an expedition at Depth 1/2/3 with a matching level and relics. In an expedition: clear the room, heal, +3 levels, random relic, jump to the Guardian, skip a depth, reveal hidden rooms, die on purpose. |
+| **F9** | Write a feedback note. The current depth, room, level, weapon and HP are attached automatically. |
+| **F2 → Download / Copy playtest report** | A Markdown report with your notes plus an automatic timeline: rooms entered and cleared (time, HP lost), level-ups, loot, guardian fights (time, damage taken), deaths (what killed you) and run results. |
+| **F1** (Training Grounds) | Combat-feel tuning: hit stop per hit type, knockback, shake, buffers, windows, hitboxes, spawns. |
+
+Active cheats are shown in red at the top of the screen so screenshots and reports are never mistaken for normal play.
+
+
 
 | Action | Keyboard | Gamepad |
 |---|---|---|

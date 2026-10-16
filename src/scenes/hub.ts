@@ -8,7 +8,8 @@ import type { Game } from '../game';
 import { buildLoadout } from '../meta/build';
 import { baseOf, itemName, rarityIndex, rollItem } from '../meta/items';
 import { DIFFICULTIES, findItem, unlocks } from '../meta/profile';
-import { relicOffers, resolveDeath, startRun } from '../meta/run';
+import { gainXp, nextDepth, relicOffers, resolveDeath, startRun, xpForLevel } from '../meta/run';
+import type { PlaytestAction, PlaytestHost } from '../ui/panels/playtest';
 import type { SimEvent } from '../sim/events';
 import { Room } from '../sim/room';
 import { World } from '../sim/world';
@@ -37,7 +38,7 @@ const HUB_STATIONS: [string, StationKind, string][] = [
   ['8', 'notice', 'Notice Board (settings & help)'],
 ];
 
-export class HubScene extends PlayScene {
+export class HubScene extends PlayScene implements PlaytestHost {
   name = 'hub';
   stations: Station[] = [];
   near: Station | null = null;
@@ -215,6 +216,42 @@ export class HubScene extends PlayScene {
 
   protected onEvent(_g: Game, _e: SimEvent): void {}
 
+  playtestContext(): string {
+    const p = this.game.profile;
+    return `Hub · ${Math.floor(p.cinders)} Cinders · ${p.board.length} Starboard nodes · ${p.stash.length} items · ${p.records.runs} expeditions`;
+  }
+
+  playtestActions(g: Game): PlaytestAction[] {
+    const start = (depth: number, levels: number, relics: number) => () => {
+      const prof = g.profile;
+      const run = startRun(prof, (Date.now() ^ 0x9e37) >>> 0);
+      while (run.depth < depth) nextDepth(prof, run);
+      if (levels > 1) {
+        let need = 0;
+        for (let l = 1; l < levels; l++) need += xpForLevel(l);
+        gainXp(run, need);
+        run.pendingChoices = 0;
+      }
+      const rng = new Rng(run.seed);
+      for (let i = 0; i < relics; i++) {
+        const o = relicOffers(rng, run, 1, 'uncommon')[0];
+        if (o) run.relics.push(o.id);
+      }
+      prof.run = run;
+      g.save();
+      g.setScene(new ExpeditionScene(g));
+    };
+    const busy = !!g.profile.run;
+    return [
+      ...(busy ? [] : [
+        { label: 'Start expedition at Depth 1', action: start(1, 1, 0) },
+        { label: 'Start at Depth 2', sub: 'run lvl 6, 4 relics', action: start(2, 6, 4) },
+        { label: 'Start at Depth 3', sub: 'run lvl 10, 8 relics', action: start(3, 10, 8) },
+      ]),
+      { label: 'Go to the Training Grounds', action: () => g.setScene(new ArenaScene(g)) },
+    ];
+  }
+
   protected extraDraw(g: CanvasRenderingContext2D, cx: number, cy: number): void {
     for (const s of this.stations) drawStation(g, s, s.x - cx, s.y - cy, this.renderer.time, s === this.near);
   }
@@ -225,7 +262,7 @@ export class HubScene extends PlayScene {
     textShadow(ctx, `${Math.floor(prof.gilt)} Gilt`, UI_W - 16, 36, C.gilt, 14, 'right', true);
     textShadow(ctx, `Slag ${prof.slag} · Starglass ${prof.starglass} · Echoes ${prof.echoes}`, UI_W - 16, 56, '#e8c8a0', 12, 'right');
     if (prof.run) textShadow(ctx, `Expedition in progress — Depth ${prof.run.depth}`, UI_W - 16, 76, C.good, 12, 'right');
-    textShadow(ctx, `${g.input.keyName('inventory')} Character · Esc Menu`, 16, 16, C.dim, 12, 'left');
+    textShadow(ctx, `${g.input.keyName('inventory')} Character · Esc Menu · F2 Playtest tools · F9 Feedback note`, 16, 16, C.dim, 12, 'left');
     if (this.near) textShadow(ctx, `${g.input.keyName('up')} / ${g.input.keyName('interact')}  ${this.near.label}`, UI_W / 2, 360, '#ffe9a8', 16, 'center', true);
     if (this.roomBanner) {
       const b = this.roomBanner;

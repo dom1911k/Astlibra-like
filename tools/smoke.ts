@@ -107,6 +107,20 @@ async function main() {
     await page.waitForTimeout(300);
     await page.screenshot({ path: OUT + '10-character.png' });
     await press(page, 'Tab');
+    // playtest tools: F2 menu and an F9 feedback note
+    await press(page, 'F2');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: OUT + '11-playtest.png' });
+    await press(page, 'Escape');
+    await page.waitForTimeout(200);
+    await press(page, 'F9');
+    await page.waitForTimeout(200);
+    await page.keyboard.type('smoke test note');
+    await page.screenshot({ path: OUT + '12-note.png' });
+    await press(page, 'Enter');
+    await page.waitForTimeout(200);
+    const notes = await page.evaluate(() => (window as any).__game.log.notes);
+    if (notes < 1) errors.push('F9 note was not saved');
     const stats = await page.evaluate(() => {
       const g = (window as any).__game;
       const w = g.scene.world;

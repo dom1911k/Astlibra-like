@@ -15,6 +15,7 @@ import { DebugPanel, type DebugRow } from '../ui/panels/debug';
 import { SettingsPanel } from '../ui/panels/settings';
 import { C, textShadow, type Ctx } from '../ui/ui';
 import { controlsText } from './expedition';
+import type { PlaytestAction, PlaytestHost } from '../ui/panels/playtest';
 import { HubScene } from './hub';
 import { PlayScene } from './play';
 
@@ -27,7 +28,7 @@ const ELITES: (EliteMod | 'none')[] = ['none', ...(Object.keys(ELITE_MODS) as El
  * Training Grounds: the dedicated combat-feel test arena. F1 opens live tuning of hit stop,
  * knockback, shake, buffers, windows; spawn any enemy/boss; swap weapon classes; try a late-game build.
  */
-export class ArenaScene extends PlayScene {
+export class ArenaScene extends PlayScene implements PlaytestHost {
   name = 'arena';
   cls: WeaponClass;
   enemyIdx = 0;
@@ -117,6 +118,14 @@ export class ArenaScene extends PlayScene {
       { label: 'Clear enemies (keep dummies)', get: () => '', action: () => { w().enemies = w().enemies.filter((e) => e.def.ai === 'dummy'); w().boss = null; w().projectiles = []; w().hazards = []; } },
       { label: 'Reset arena', get: () => '', action: () => this.reset(g) },
     ];
+  }
+
+  playtestContext(): string {
+    return `Training Grounds · ${MOVESETS[this.cls].name}${this.lateGame ? ' · late-game build' : ''}`;
+  }
+
+  playtestActions(g: Game): PlaytestAction[] {
+    return [{ label: 'Open combat tuning & spawns (F1)', action: () => g.push(new DebugPanel(this.debugRows(g))) }];
   }
 
   private spawn(id: string, dx = 0): void {

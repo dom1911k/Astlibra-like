@@ -1,7 +1,7 @@
 import { GRAVITY, MAX_FALL } from '../core/constants';
 import type { Action, InputSource } from '../core/input';
 import { approach, clamp, overlaps } from '../core/math';
-import { Tuning } from '../core/tuning';
+import { Dev, Tuning } from '../core/tuning';
 import { ATTACKS, MOVESETS, type Moveset } from '../data/movesets';
 import { SPELLS, type SpellDef } from '../data/spells';
 import { moveBody, type Body } from './room';
@@ -220,6 +220,7 @@ export class Player implements Body {
     const cdr = 1 + Math.max(0, this.stats.cdr);
     for (let i = 0; i < this.spellCd.length; i++) if (this.spellCd[i] > 0) this.spellCd[i] = Math.max(0, this.spellCd[i] - cdr);
     if (this.barrierT > 0 && --this.barrierT === 0) this.barrier = 0;
+    if (Dev.infiniteMp) this.mp = this.derived.maxMp;
     if (this.stats.mpRegen > 0) this.mp = Math.min(this.derived.maxMp, this.mp + this.stats.mpRegen / 60);
     let changed = false;
     for (const b of this.buffs) b.t++;

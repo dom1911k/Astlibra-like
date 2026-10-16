@@ -21,6 +21,17 @@ export interface TuningValues {
   showHitboxes: boolean;
   godMode: boolean;
 }
+
+/** Playtest cheats (never persisted; reset every session). */
+export const Dev = { damageMult: 1, infiniteMp: false, timeScale: 1, fastExit: false };
+export function devActive(): string[] {
+  const out: string[] = [];
+  if (Tuning.godMode) out.push('GOD');
+  if (Dev.damageMult !== 1) out.push(`DMG×${Dev.damageMult}`);
+  if (Dev.infiniteMp) out.push('∞AETHER');
+  if (Dev.timeScale !== 1) out.push(`SPEED×${Dev.timeScale}`);
+  return out;
+}
 export type HitStopKind = 'light' | 'heavy' | 'crit' | 'finisher' | 'parry' | 'guardBreak' | 'kill' | 'hurt' | 'magic';
 
 export const DEFAULT_TUNING: TuningValues = {

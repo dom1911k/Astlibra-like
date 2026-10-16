@@ -1,4 +1,5 @@
 import { UI_H, UI_W } from '../core/constants';
+import { Dev } from '../core/tuning';
 import { fmt } from '../core/math';
 import { MOVESETS } from '../data/movesets';
 import { RELICS } from '../data/relics';
@@ -40,6 +41,7 @@ export abstract class PlayScene implements Scene {
   frame(g: Game, dt: number, simAllowed: boolean): void {
     this.renderer.settings = g.settings;
     if (simAllowed && this.hotkeys(g)) simAllowed = false;
+    this.world.time.timeScale = Dev.timeScale;
     if (simAllowed) {
       this.alpha = this.world.time.advance(dt, () => this.world.step());
       const evs = this.renderer.consume(this.world.events, g.audio);

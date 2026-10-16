@@ -3,7 +3,7 @@ export type Action =
   | 'jump' | 'light' | 'heavy' | 'dodge' | 'guard'
   | 'art' | 'spell1' | 'spell2' | 'potion' | 'interact'
   | 'pause' | 'inventory' | 'map'
-  | 'confirm' | 'back' | 'tabL' | 'tabR' | 'debug';
+  | 'confirm' | 'back' | 'tabL' | 'tabR' | 'debug' | 'playtest' | 'note';
 
 export const GAMEPLAY_ACTIONS: Action[] = [
   'left', 'right', 'up', 'down', 'jump', 'light', 'heavy', 'dodge', 'guard', 'art', 'spell1', 'spell2', 'potion', 'interact', 'map', 'inventory',
@@ -14,7 +14,7 @@ export const ACTION_LABEL: Record<Action, string> = {
   jump: 'Jump', light: 'Light Attack', heavy: 'Heavy Attack (hold: charge)', dodge: 'Dodge',
   guard: 'Guard / Parry', art: 'Weapon Art', spell1: 'Spell I', spell2: 'Spell II', potion: 'Lamp Oil (heal)',
   interact: 'Interact', pause: 'Pause', inventory: 'Character', map: 'Map', confirm: 'Confirm', back: 'Back',
-  tabL: 'Prev Tab', tabR: 'Next Tab', debug: 'Debug Panel',
+  tabL: 'Prev Tab', tabR: 'Next Tab', debug: 'Debug Panel', playtest: 'Playtest Menu', note: 'Feedback Note',
 };
 
 export type KeyBindings = Record<Action, string[]>;
@@ -42,6 +42,8 @@ export const DEFAULT_KEYS: KeyBindings = {
   tabL: ['KeyQ', 'PageUp'],
   tabR: ['KeyE', 'PageDown'],
   debug: ['F1'],
+  playtest: ['F2'],
+  note: ['F9'],
 };
 
 /** Standard-mapping gamepad buttons. */
@@ -87,14 +89,21 @@ export class Input implements InputSource {
   lastDevice: 'keyboard' | 'gamepad' = 'keyboard';
   /** when set, the next key press is captured for remapping */
   captureNext: ((code: string) => void) | null = null;
+  /** when set, every key press is routed here as text input (feedback notes) */
+  textCapture: ((key: string) => void) | null = null;
   anyPressedThisFrame = false;
   onFirstInput: (() => void) | null = null;
 
   attach(target: Window): void {
     target.addEventListener('keydown', (e) => {
-      if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'F1') e.preventDefault();
+      if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'F1' || e.code === 'F2' || e.code === 'F9') e.preventDefault();
       this.firstInput();
       this.lastDevice = 'keyboard';
+      if (this.textCapture) {
+        e.preventDefault();
+        this.textCapture(e.key);
+        return;
+      }
       if (this.captureNext) {
         const cb = this.captureNext;
         this.captureNext = null;
@@ -183,6 +192,10 @@ export class Input implements InputSource {
       return true;
     }
     return false;
+  }
+  /** forget this frame's UI presses (a closing menu must not also trigger the scene underneath) */
+  clearUi(): void {
+    this.uiPressed.clear();
   }
   endFrame(): void {
     this.uiPressed.clear();

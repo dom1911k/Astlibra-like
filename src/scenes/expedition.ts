@@ -9,7 +9,9 @@ import { buildLoadout } from '../meta/build';
 import { buildEncounter, NODE_INFO, type MapNode } from '../meta/expedition';
 import { describeItem, itemName, makeItem, rarityIndex } from '../meta/items';
 import { DIFFICULTIES } from '../meta/profile';
-import { addCurse, bankRun, cinderReward, dropItem, gainXp, nextDepth, relicOffers, resolveDeath, type RunState } from '../meta/run';
+import { addCurse, bankRun, cinderReward, dropItem, gainXp, nextDepth, relicOffers, resolveDeath, xpForLevel, type RunState } from '../meta/run';
+import { Tuning } from '../core/tuning';
+import type { PlaytestAction, PlaytestHost } from '../ui/panels/playtest';
 import { THEMES } from '../render/theme';
 import type { SimEvent } from '../sim/events';
 import { Room } from '../sim/room';
@@ -29,7 +31,7 @@ import { HubScene } from './hub';
 
 const BOSS_DROPS: Record<string, string> = { rootmaw: 'rootmaw_fang', matriarch: 'moth_veil', vessel: 'starheart' };
 
-export class ExpeditionScene extends PlayScene {
+export class ExpeditionScene extends PlayScene implements PlaytestHost {
   name = 'expedition';
   r: RunState;
   node!: MapNode;
@@ -116,6 +118,34 @@ export class ExpeditionScene extends PlayScene {
     } else g.audio.setMusic(('depth' + r.depth) as any);
     g.profile.run = r;
     g.save();
+    g.log.add('room', `Entered ${NODE_INFO[node.type].name} (${node.template})`, this.playtestContext());
+    this.roomHpStart = world.player.hp;
+  }
+
+  private roomHpStart = 0;
+
+  playtestContext(): string {
+    const r = this.r;
+    const p = this.world?.player;
+    const node = this.node;
+    const wpn = p ? p.moveset.name : '?';
+    return `Depth ${r.depth} · ${node ? NODE_INFO[node.type].name + ' ' + node.template : ''} · run lvl ${r.level} · ${r.relics.length} relics · ${wpn} · HP ${p ? Math.ceil(p.hp) + '/' + p.derived.maxHp : '?'} · ${Math.round(r.stats.time)}s in`;
+  }
+
+  playtestActions(g: Game): PlaytestAction[] {
+    const r = this.r;
+    const w = this.world;
+    const p = w.player;
+    return [
+      { label: 'Clear this room', sub: 'kills everything (bosses too)', action: () => { for (const e of [...w.enemies]) if (e.alive && e.def.ai !== 'dummy') w.killEnemy(e, null); w.waves = []; } },
+      { label: 'Full heal & refill Lamp Oil', action: () => { p.hp = p.derived.maxHp; p.mp = p.derived.maxMp; p.potions = Math.round(p.stats.potions); } },
+      { label: 'Gain 3 run levels', sub: 'relic choices included', action: () => { let need = 0; for (let l = r.level; l < r.level + 3; l++) need += xpForLevel(l); gainXp(r, need - r.xp); this.rebuild(); this.offerLevelRelic(g); } },
+      { label: 'Gain a random rare+ relic', action: () => { const o = relicOffers(this.rng, r, 1, 'rare')[0]; if (o) this.takeRelic(g, o.id); } },
+      { label: 'Jump to this depth\'s Guardian', action: () => { r.stats.rooms++; this.enterNode(g, r.map.nodes[r.map.boss]); } },
+      ...(r.depth < 3 ? [{ label: `Skip to Depth ${r.depth + 1}`, sub: 'banks loot first', action: () => { bankRun(g.profile, r); nextDepth(g.profile, r); this.enterNode(g, r.map.nodes[r.map.start]); } }] : []),
+      { label: 'Reveal hidden rooms on the map', action: () => { for (const n of Object.values(r.map.nodes)) n.hidden = false; } },
+      { label: 'Die now', sub: 'test the death flow', action: () => { w.lastHurtBy = 'playtest menu'; const god = Tuning.godMode; Tuning.godMode = false; w.playerDied(); Tuning.godMode = god; } },
+    ];
   }
 
   private setupUtility(node: MapNode, room: Room): void {
@@ -209,6 +239,7 @@ export class ExpeditionScene extends PlayScene {
         prof.codex.enemies[e.enemyId] = (prof.codex.enemies[e.enemyId] ?? 0) + 1;
         const lv = gainXp(r, Math.round(e.xp * (1 + p.stats.xpGain)));
         if (lv > 0) {
+          g.log.add('level', `Reached run level ${r.level}`, this.playtestContext());
           g.sfx('levelup');
           g.toast(`Level ${r.level}!${r.pendingChoices ? ' A relic choice awaits when the room is clear.' : ''}`, '#d8b0ff');
           this.rebuild();
@@ -251,6 +282,7 @@ export class ExpeditionScene extends PlayScene {
         this.deathT = 0;
         break;
       case 'bossDefeated':
+        g.log.add('boss', `Defeated ${e.id} in ${Math.round(r.stats.time - this.roomStartTime)}s, took ${Math.round(this.world.stats.dmgTaken)} damage`, this.playtestContext());
         this.bossKilled = e.id;
         this.checkpointT = 0;
         prof.records.bossKills[e.id] = (prof.records.bossKills[e.id] ?? 0) + 1;
@@ -288,6 +320,7 @@ export class ExpeditionScene extends PlayScene {
     const r = this.r;
     r.items.push(it);
     r.stats.itemsFound++;
+    g.log.add('loot', `${it.rarity} ${itemName(it)}`);
     const prof = g.profile;
     if (!prof.codex.items.includes(it.baseId)) prof.codex.items.push(it.baseId);
     g.toast(`Found ${it.rarity} ${itemName(it)} — ${ITEMS[it.baseId].passive.name}`, RARITY_COLOR[it.rarity], 3200);
@@ -328,6 +361,7 @@ export class ExpeditionScene extends PlayScene {
     const n = this.node;
     const p = this.world.player;
     r.roomCleared = true;
+    g.log.add('clear', `Cleared ${NODE_INFO[n.type].name} in ${Math.round(r.stats.time - this.roomStartTime)}s, lost ${Math.max(0, Math.round(this.roomHpStart - p.hp))} HP`, this.playtestContext());
     const center = { x: p.x + p.facing * 30, y: p.y - 20 };
     const luck = p.stats.lootLuck;
     if (n.type === 'combat' || n.type === 'start') {
@@ -554,6 +588,7 @@ export class ExpeditionScene extends PlayScene {
     const prof = g.profile;
     const r = this.r;
     prof.records.deaths++;
+    g.log.add('death', `Died — killed by ${this.world.lastHurtBy || 'unknown'}`, this.playtestContext());
     const out = resolveDeath(prof, r);
     this.finish(g, 'death', out);
   }
@@ -570,6 +605,7 @@ export class ExpeditionScene extends PlayScene {
     prof.records.maxHit = Math.max(prof.records.maxHit, this.world.stats.maxHit, r.stats.maxHit);
     prof.records.bestDepth = Math.max(prof.records.bestDepth, kind === 'death' ? r.depth - 1 : r.depth);
     prof.run = null;
+    g.log.add('run', `Expedition ended: ${kind} at depth ${r.depth}, level ${r.level}, ${r.stats.kills} kills, ${Math.round(r.stats.time / 60)} min`);
     g.save();
     g.setScene(new SummaryScene(g, { kind, run: r, death }));
   }

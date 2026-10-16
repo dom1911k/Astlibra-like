@@ -2,7 +2,7 @@ import { Rng } from '../core/rng';
 import type { InputSource } from '../core/input';
 import { overlaps, union, clamp } from '../core/math';
 import { TimeController } from '../core/time';
-import { Tuning, type HitStopKind } from '../core/tuning';
+import { Dev, Tuning, type HitStopKind } from '../core/tuning';
 import type { EnemyAttack } from '../data/enemies';
 import type { AttackDef, Box, Element, ProcDef, ProjectileSpec, StatusType, Trigger, AttackKind, Sfx } from './types';
 import { computeDamage, isAfflicted } from './damage';
@@ -155,6 +155,8 @@ export class World {
   ttk: { id: string; ticks: number }[] = [];
   private enemyBorn = new Map<number, number>();
   exitCooldown = 0;
+  /** name of whatever last damaged the player (playtest death reports) */
+  lastHurtBy = '';
 
   constructor(room: Room, loadout: Loadout, input: InputSource, seed: number, time?: TimeController) {
     this.room = room;
@@ -476,6 +478,7 @@ export class World {
     }
     if (e.barrier > 0) dmg = Math.round(dmg * 0.5);
     if (e.ward) dmg = Math.round(dmg * 0.6);
+    dmg = Math.round(dmg * Dev.damageMult);
     if (e.isBoss) dmg = (e as Boss).modifyDamage(dmg);
     e.hp -= dmg;
     e.lastHitTick = this.tick;
@@ -635,6 +638,7 @@ export class World {
   /** Apply an enemy attack to the player. Resolves i-frames, counters, parries, guards. */
   hurtPlayer(h: EnemyHit): 'hit' | 'blocked' | 'parried' | 'dodged' | 'countered' | 'immune' {
     const p = this.player;
+    const srcName = h.source ? (h.source.isBoss ? (h.source as Boss).bossDef.name : h.source.displayName()) : h.projectile ? 'projectile' : 'explosion/hazard';
     if (p.dead) return 'immune';
     if (p.iframes > 0 && p.state === 'dodge') {
       if (!p.perfectUsed && p.st <= 10) {
@@ -729,6 +733,7 @@ export class World {
       this.emit({ t: 'burst', x: p.x, y: p.cy, kind: 'shard', color: '#8fe0ff', count: 8 });
       if (h.source) h.source.addBuildup(this, 'frost', 35, 1);
     }
+    this.lastHurtBy = srcName;
     if (dmg > 0) {
       this.applyPlayerDamage(dmg, h.element, false);
       p.hurt(this, 0, h.kb, h.dir);
@@ -774,6 +779,7 @@ export class World {
   spikePlayer(): void {
     const p = this.player;
     if (p.invuln > 0 || p.iframes > 0) return;
+    this.lastHurtBy = 'spikes';
     const dmg = Math.max(1, Math.round(p.derived.maxHp * 0.12));
     this.applyPlayerDamage(dmg, 'phys', false);
     p.hurt(this, 0, [0, -6], -p.facing);

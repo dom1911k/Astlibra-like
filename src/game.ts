@@ -4,7 +4,10 @@ import { DEFAULT_KEYS, Input } from './core/input';
 import type { Settings } from './core/settings';
 import { loadTuning } from './core/tuning';
 import type { Profile } from './meta/profile';
-import { loadProfile, saveProfile } from './meta/save';
+import { loadProfile, saveProfile, wipeSave } from './meta/save';
+import { PlayLog } from './meta/playlog';
+import { NotePanel, PlaytestPanel, isPlaytestHost } from './ui/panels/playtest';
+import { devActive } from './core/tuning';
 import { C, font, type Ctx } from './ui/ui';
 
 export interface Panel {
@@ -50,6 +53,7 @@ export class Game {
   private fpsN = 0;
   saveNotice = '';
   frameTimes: number[] = [];
+  log = new PlayLog();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -147,6 +151,14 @@ export class Game {
     }
     this.input.poll();
     this.audio.update();
+    // global playtest keys (F2 tools, F9 feedback note) — available in every scene
+    if (!this.input.textCapture) {
+      if (this.input.take('note') && !this.panels.some((p) => p instanceof NotePanel)) this.openNote();
+      else if (this.input.take('playtest') && !this.panels.some((p) => p instanceof PlaytestPanel)) {
+        this.push(new PlaytestPanel(isPlaytestHost(this.scene) ? this.scene : null));
+        this.sfx('confirm');
+      }
+    }
     // panels
     const top = this.topPanel;
     if (top) {
@@ -155,6 +167,7 @@ export class Game {
         this.panels.splice(this.panels.indexOf(top), 1);
         top.onClose?.();
         this.input.clearSim();
+        this.input.clearUi();
       }
     }
     const simAllowed = !this.panels.some((p) => p.blocksSim !== false);
@@ -175,6 +188,14 @@ export class Game {
     this.scene.render(g, this);
     for (const p of this.panels) p.draw(g, this);
     this.drawToasts(g);
+    const cheats = devActive();
+    if (cheats.length) {
+      g.font = font(12, true);
+      g.textAlign = 'center';
+      g.textBaseline = 'top';
+      g.fillStyle = 'rgba(255,90,90,0.9)';
+      g.fillText('PLAYTEST: ' + cheats.join(' · '), UI_W / 2, 4);
+    }
     if (this.settings.showFps) {
       const ft = this.frameTimes.length ? Math.max(...this.frameTimes) : 0;
       g.font = font(12);
@@ -186,6 +207,30 @@ export class Game {
     this.input.endFrame();
     this.frameTimes.push(performance.now() - t0);
     if (this.frameTimes.length > 120) this.frameTimes.shift();
+  }
+
+  openNote(): void {
+    const ctx = isPlaytestHost(this.scene) ? this.scene.playtestContext() : this.scene.name;
+    this.push(new NotePanel(this, ctx));
+  }
+
+  /** One-paragraph state summary for the playtest report. */
+  reportSummary(): string {
+    const p = this.profile;
+    const r = p.records;
+    const run = p.run;
+    return [
+      `Expeditions ${r.runs} · deaths ${r.deaths} · extractions ${r.extractions} · victories ${r.victories} · deepest depth ${r.bestDepth}`,
+      `Total kills ${r.totalKills} · biggest hit ${r.maxHit} · longest combo ${r.maxCombo} · Cinders earned ${Math.floor(r.cindersEarned)}`,
+      `Starboard nodes ${p.board.length} · stash items ${p.stash.length} · difficulty unlocked ${p.difficultyUnlocked + 1}`,
+      run ? `Run in progress: depth ${run.depth}, level ${run.level}, ${run.relics.length} relics, ${Math.round(run.stats.time / 60)} min` : 'No run in progress.',
+      `Active cheats: ${devActive().join(', ') || 'none'} · browser: ${navigator.userAgent}`,
+    ].join('  \n');
+  }
+
+  resetSave(): void {
+    wipeSave();
+    location.reload();
   }
 
   private drawToasts(g: Ctx): void {
