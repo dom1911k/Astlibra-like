@@ -162,8 +162,8 @@ export class ArenaScene extends PlayScene {
     if (p.state === 'attack' && p.atk) {
       const a = p.atk;
       const phase = a.t < a.def.startup ? 'startup' : a.t < a.def.startup + a.def.active ? 'ACTIVE' : 'recovery';
-      textShadow(ctx, `${a.def.name}  ${phase}  ${a.t.toFixed(0)}/${a.def.startup + a.def.active + a.def.recovery}f  cancel@${a.def.cancel}${a.hitConfirm ? ' (hit)' : ''}`, UI_W / 2, 470, phase === 'ACTIVE' ? '#ff8a8a' : C.dim, 13, 'center', true);
+      textShadow(ctx, `${a.def.name}  ${phase}  ${a.t.toFixed(0)}/${a.def.startup + a.def.active + a.def.recovery}f  cancel@${a.def.cancel}${a.hitConfirm ? ' (hit)' : ''}`, UI_W / 2, 84, phase === 'ACTIVE' ? '#ff8a8a' : C.dim, 13, 'center', true);
     }
-    if (this.world.time.frozen) textShadow(ctx, 'HIT STOP', UI_W / 2, 486, '#ffd23c', 11, 'center', true);
+    if (this.world.time.frozen) textShadow(ctx, 'HIT STOP', UI_W / 2, 102, '#ffd23c', 11, 'center', true);
   }
 }

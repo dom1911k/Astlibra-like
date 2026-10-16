@@ -581,14 +581,14 @@ export class ExpeditionScene extends PlayScene {
 
   protected drawExtraHud(ctx: Ctx, g: Game): void {
     this.drawRelics(ctx, this.r);
-    if (this.nearStation) textShadow(ctx, `${g.input.keyName('up')} / ${g.input.keyName('interact')}  ${this.nearStation.label}`, UI_W / 2, 400, '#ffe9a8', 15, 'center', true);
+    if (this.nearStation) textShadow(ctx, `${g.input.keyName('up')} / ${g.input.keyName('interact')}  ${this.nearStation.label}`, UI_W / 2, 360, '#ffe9a8', 15, 'center', true);
     if (this.node.type === 'challenge' && !this.r.roomCleared) {
       const secs = this.r.stats.time - this.roomStartTime;
       const left = Math.max(0, this.challengeLimit - secs);
-      textShadow(ctx, `GAUNTLET ${left.toFixed(1)}s`, UI_W / 2, 20, left > 0 ? '#5fa8ff' : C.dim, 18, 'center', true);
+      textShadow(ctx, `GAUNTLET ${left.toFixed(1)}s`, UI_W / 2, 92, left > 0 ? '#5fa8ff' : C.dim, 18, 'center', true);
     }
-    if (this.world.exitOpen && !this.world.peaceful && this.r.roomCleared && this.node.type !== 'boss') textShadow(ctx, 'Room clear — head to the exit ▶', UI_W / 2, 20, C.good, 14, 'center', true);
-    if (this.world.peaceful && !this.nearStation && this.stations.length) textShadow(ctx, 'Approach a station and press Up to interact', UI_W / 2, 20, C.dim, 13, 'center');
+    if (this.world.exitOpen && !this.world.peaceful && this.r.roomCleared && this.node.type !== 'boss') textShadow(ctx, 'Room clear — head to the exit ▶', UI_W / 2, 92, C.good, 14, 'center', true);
+    if (this.world.peaceful && !this.nearStation && this.stations.length) textShadow(ctx, 'Approach a station and press Up to interact', UI_W / 2, 92, C.dim, 13, 'center');
     if (this.deathT >= 0) {
       ctx.fillStyle = `rgba(0,0,0,${Math.min(0.7, this.deathT / 1800)})`;
       ctx.fillRect(0, 0, UI_W, 540);

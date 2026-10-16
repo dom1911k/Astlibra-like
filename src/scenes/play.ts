@@ -179,9 +179,9 @@ export abstract class PlayScene implements Scene {
   }
 
   private drawBossBar(ctx: Ctx, b: Boss): void {
-    const w = 520;
+    const w = 400;
     const x = (UI_W - w) / 2;
-    const y = UI_H - 52;
+    const y = 34;
     const f = Math.max(0, b.hp / b.maxHp);
     this.bossGhost = Math.max(f, this.bossGhost - 0.002);
     ctx.fillStyle = 'rgba(8,6,12,0.75)';

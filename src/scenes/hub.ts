@@ -226,7 +226,7 @@ export class HubScene extends PlayScene {
     textShadow(ctx, `Slag ${prof.slag} · Starglass ${prof.starglass} · Echoes ${prof.echoes}`, UI_W - 16, 56, '#e8c8a0', 12, 'right');
     if (prof.run) textShadow(ctx, `Expedition in progress — Depth ${prof.run.depth}`, UI_W - 16, 76, C.good, 12, 'right');
     textShadow(ctx, `${g.input.keyName('inventory')} Character · Esc Menu`, 16, 16, C.dim, 12, 'left');
-    if (this.near) textShadow(ctx, `${g.input.keyName('up')} / ${g.input.keyName('interact')}  ${this.near.label}`, UI_W / 2, 400, '#ffe9a8', 16, 'center', true);
+    if (this.near) textShadow(ctx, `${g.input.keyName('up')} / ${g.input.keyName('interact')}  ${this.near.label}`, UI_W / 2, 360, '#ffe9a8', 16, 'center', true);
     if (this.roomBanner) {
       const b = this.roomBanner;
       const a = b.t < 300 ? b.t / 300 : b.t > 2000 ? Math.max(0, 1 - (b.t - 2000) / 600) : 1;
